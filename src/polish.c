@@ -460,19 +460,11 @@ OSQPInt polish(OSQPSolver* solver) {
 
   // Check if polish was successful
   polish_successful = (work->pol->prim_res < info->prim_res &&
-                       work->pol->dual_res < info->dual_res) || // Residuals
-                                                                    // are
-                                                                    // reduced
+                       work->pol->dual_res < info->dual_res) ||
                       (work->pol->prim_res < info->prim_res &&
-                       info->dual_res < 1e-10) ||              // Dual
-                                                                    // residual
-                                                                    // already
-                                                                    // tiny
+                       info->dual_res < 1e-10 && work->pol->dual_res < 1e-10) ||
                       (work->pol->dual_res < info->dual_res &&
-                       info->prim_res < 1e-10);                // Primal
-                                                                    // residual
-                                                                    // already
-                                                                    // tiny
+                       info->prim_res < 1e-10 && work->pol->prim_res < 1e-10);
 
   if (polish_successful) {
     // Update solver information

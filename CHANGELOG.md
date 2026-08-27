@@ -1,3 +1,7 @@
+Unreleased
+----------
+* Prevent polishing from replacing the ADMM solution when a polished KKT residual degrades beyond the acceptance threshold.
+
 Version 1.0.0.beta0 (May 31, 2021)
 ----------------------------------
 First beta release of OSQP v1.0

@@ -7,6 +7,62 @@
 #include "basic_qp_data.h"
 
 
+#if defined(OSQP_ALGEBRA_BUILTIN) && !defined(OSQP_USE_FLOAT)
+TEST_CASE("Polishing rejects a degraded dual residual", "[polish][regression]")
+{
+  OSQPFloat P_x[10] = {
+    4.1808645950911965,
+    0.44690128191460515, 1.0017895414423332,
+    1.8366797318100276, 0.36306796713298567, 1.2136981891025493,
+    1.790246466328951, -1.7084875079784945, 0.5144624591668353,
+    5.390092402940427
+  };
+  OSQPInt P_i[10] = {0, 0, 1, 0, 1, 2, 0, 1, 2, 3};
+  OSQPInt P_p[5] = {0, 1, 3, 6, 10};
+  OSQPCscMatrix P;
+  OSQPCscMatrix_set_data(&P, 4, 4, 10, P_x, P_i, P_p);
+
+  OSQPFloat q[4] = {
+    2.5229445413976057, -0.7641899948191101,
+    0.6813963386073322, -1.580571417946669
+  };
+  OSQPFloat A_x[4] = {
+    6802.195057324533, 859169.6071018894,
+    1307081.4281253067, 881514.7112147971
+  };
+  OSQPInt A_i[4] = {0, 0, 0, 0};
+  OSQPInt A_p[5] = {0, 1, 2, 3, 4};
+  OSQPCscMatrix A;
+  OSQPCscMatrix_set_data(&A, 1, 4, 4, A_x, A_i, A_p);
+
+  OSQPFloat l[1] = {-490209.4743924113};
+  OSQPFloat u[1] = {724880.97957331};
+  OSQPFloat expected_x[4] = {
+    -0.31067381673136507, 4.347442153945208,
+    -3.586976834833444, 1.9061223354759043
+  };
+
+  OSQPSettings_ptr settings{OSQPSettings_new()};
+  settings->eps_abs = 1e-9;
+  settings->eps_rel = 1e-9;
+  settings->polishing = 1;
+  settings->verbose = 0;
+
+  OSQPSolver* polished_raw = OSQP_NULL;
+  REQUIRE(osqp_setup(&polished_raw, &P, q, &A, l, u, 1, 4, settings.get()) == 0);
+  OSQPSolver_ptr polished{polished_raw};
+  REQUIRE(osqp_solve(polished.get()) == 0);
+
+  CHECK(polished->info->status_val == OSQP_SOLVED);
+  CHECK(polished->info->status_polish == OSQP_POLISH_FAILED);
+  CHECK(polished->work->pol->prim_res < polished->info->prim_res);
+  CHECK(polished->info->dual_res < 1e-10);
+  CHECK(polished->work->pol->dual_res > 1e-2);
+  CHECK(vec_norm_inf_diff(polished->solution->x, expected_x, 4) < 1e-8);
+}
+#endif
+
+
 TEST_CASE_METHOD(basic_qp_test_fixture, "Basic QP: Solve", "[solve][qp]")
 {
   OSQPInt exitflag;
